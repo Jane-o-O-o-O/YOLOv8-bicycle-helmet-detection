@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import (
     QApplication,
     QAbstractItemView,
     QFileDialog,
+    QLabel,
     QHeaderView,
     QMainWindow,
     QMessageBox,
@@ -145,9 +146,59 @@ class MainWindow(QMainWindow):
         self.timer_camera.timeout.connect(self.open_frame)
 
         self.init_table()
+        self.init_innovation_panel()
         self.reset_display_state()
         self.reset_vote_state()
         self.statusBar().showMessage('ROI已启用，等待检测。')
+
+    def init_innovation_panel(self):
+        self.violation_event_count = 0
+        self.last_evidence_path = '暂无'
+
+        # Compress the lower right area slightly and insert a visible innovation panel.
+        self.ui.groupBox_2.setGeometry(0, 180, 431, 335)
+        self.ui.frame_6.setGeometry(0, 155, 431, 170)
+
+        self.innovation_group = self._create_group_box(self.ui.frame_4, 0, 520, 431, 90, '创新点展示')
+        self.roi_status_lb = self._create_info_label(self.innovation_group, 16, 28, 190, 'ROI状态: 已启用')
+        self.vote_status_lb = self._create_info_label(self.innovation_group, 220, 28, 190, f'投票结果: 0/{Config.vote_window}')
+        self.stable_status_lb = self._create_info_label(self.innovation_group, 16, 52, 190, '稳定违规: 否')
+        self.violation_count_lb = self._create_info_label(self.innovation_group, 220, 52, 190, '累计违规: 0')
+        self.evidence_status_lb = self._create_info_label(self.innovation_group, 16, 72, 395, '最近证据: 暂无', point_size=10)
+
+        self.ui.groupBox_4.setGeometry(0, 615, 431, 90)
+        self.ui.SaveBtn.setGeometry(30, 35, 151, 40)
+        self.ui.ExitBtn.setGeometry(250, 35, 151, 40)
+
+    def _create_group_box(self, parent, x, y, w, h, title):
+        box = self.ui.groupBox_4.__class__(parent)
+        box.setGeometry(x, y, w, h)
+        box.setFont(self.ui.groupBox_4.font())
+        box.setTitle(title)
+        return box
+
+    def _create_info_label(self, parent, x, y, w, text, point_size=11):
+        label = QLabel(parent)
+        label.setGeometry(x, y, w, 20)
+        font = label.font()
+        font.setPointSize(point_size)
+        label.setFont(font)
+        label.setText(text)
+        return label
+
+    def update_innovation_panel(self, stable_violation=False, vote_enabled=False):
+        roi_text = '已启用' if Config.roi_enabled else '已关闭'
+        vote_text = f'{self.vote_hits}/{Config.vote_window}' if vote_enabled else '-'
+        stable_text = '是' if stable_violation else '否'
+        evidence_text = self.last_evidence_path if self.last_evidence_path else '暂无'
+        if len(evidence_text) > 34:
+            evidence_text = '...' + evidence_text[-31:]
+
+        self.roi_status_lb.setText(f'ROI状态: {roi_text}')
+        self.vote_status_lb.setText(f'投票结果: {vote_text}')
+        self.stable_status_lb.setText(f'稳定违规: {stable_text}')
+        self.violation_count_lb.setText(f'累计违规: {self.violation_event_count}')
+        self.evidence_status_lb.setText(f'最近证据: {evidence_text}')
 
     def init_table(self):
         self.ui.tableWidget.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
@@ -176,6 +227,7 @@ class MainWindow(QMainWindow):
         self.vote_history = deque(maxlen=Config.vote_window)
         self.vote_hits = 0
         self.event_active = False
+        self.update_innovation_panel(stable_violation=False, vote_enabled=False)
 
     def stop_current_capture(self):
         if self.cap is not None:
@@ -251,6 +303,7 @@ class MainWindow(QMainWindow):
         self.update_combo_items()
         self.update_detail_panel()
         self.tabel_info_show(self.location_list, self.cls_list, self.conf_list, path=source_name)
+        self.update_innovation_panel(stable_violation=stable_violation, vote_enabled=enable_vote)
         self.statusBar().showMessage(' | '.join(self.status_lines))
 
     def handle_vote_and_record(self, source_name, data):
@@ -275,6 +328,8 @@ class MainWindow(QMainWindow):
             evidence_path = record_violation_event(annotated, source_name, data, self.vote_hits)
             self.event_active = True
             if evidence_path:
+                self.violation_event_count += 1
+                self.last_evidence_path = evidence_path
                 self.statusBar().showMessage(f'违规证据已保存: {evidence_path}')
         elif not stable_violation:
             self.event_active = False
@@ -495,6 +550,7 @@ class MainWindow(QMainWindow):
             self.video_stop()
             self.ui.label_show.clear()
             self.reset_display_state()
+            self.update_innovation_panel(stable_violation=False, vote_enabled=False)
             cv2.destroyAllWindows()
 
     def get_resize_size(self, img):
