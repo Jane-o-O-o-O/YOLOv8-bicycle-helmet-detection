@@ -1,0 +1,15 @@
+.idea/
+__pycache__/
+*.py[cod]
+*.log
+*.tmp
+~$*
+*.rar
+
+YOLOv8/YOLOv8helmet/datasets/
+YOLOv8/YOLOv8helmet/runs/
+YOLOv8/YOLOv8helmet/save_data/
+
+YOLOv8_addcbam/YOLOv8helmet_addcbam/datasets/
+YOLOv8_addcbam/YOLOv8helmet_addcbam/runs/
+YOLOv8_addcbam/YOLOv8helmet_addcbam/save_data/
