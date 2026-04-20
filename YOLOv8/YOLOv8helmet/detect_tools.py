@@ -7,7 +7,12 @@ import time
 import cv2
 import numpy as np
 from PIL import Image, ImageDraw
-from PyQt5.QtGui import QImage, QPixmap
+
+try:
+    from PyQt5.QtGui import QImage, QPixmap
+except Exception:  # pragma: no cover - optional UI dependency
+    QImage = None
+    QPixmap = None
 
 
 def cv_show(name, img):
@@ -21,10 +26,10 @@ def ensure_dir(path):
         os.makedirs(path, exist_ok=True)
 
 
-def drawRectBox(image, rect, addText, fontC, color):
-    cv2.rectangle(image, (rect[0], rect[1]), (rect[2], rect[3]), color, 2)
+def drawRectBox(image, rect, addText, fontC, color, line_thickness=2):
+    cv2.rectangle(image, (rect[0], rect[1]), (rect[2], rect[3]), color, line_thickness)
 
-    text_width = max(80, 18 * max(2, len(addText)))
+    text_width = max(120, 20 * max(2, len(addText)))
     cv2.rectangle(
         image,
         (rect[0] - 1, max(0, rect[1] - 28)),
@@ -62,6 +67,8 @@ def draw_boxes(img, boxes):
 
 
 def cvimg_to_qpiximg(cvimg):
+    if QImage is None or QPixmap is None:
+        raise ImportError('PyQt5 is required for cvimg_to_qpiximg')
     height, width, depth = cvimg.shape
     cvimg = cv2.cvtColor(cvimg, cv2.COLOR_BGR2RGB)
     qimg = QImage(cvimg.data, width, height, width * depth, QImage.Format_RGB888)
@@ -89,14 +96,34 @@ def draw_status_lines(image, lines):
     return image
 
 
-def draw_detection_frame(image, locations, clses, labels, fontC, colors, roi_rect=None, status_lines=None, stable_violation=False):
-    draw_roi_box(image, roi_rect)
+def draw_detection_frame(
+    image,
+    locations,
+    clses,
+    labels,
+    fontC,
+    colors,
+    roi_rect=None,
+    status_lines=None,
+    stable_violation=False,
+    rider_violation_indices=None,
+):
+    rider_set = set(rider_violation_indices or ())
+    # 与类别色区分：载人违规车辆用红色粗框 + 醒目标签
+    rider_color = (0, 0, 255)
+    rider_thickness = 4
+    for idx, (location, cls_id, label) in enumerate(zip(locations, clses, labels)):
+        if idx in rider_set:
+            color = rider_color
+            thickness = rider_thickness
+            display = f'【载人违规】{label}'
+        else:
+            color = colors(int(cls_id), True)
+            thickness = 2
+            display = label
+        image = drawRectBox(image, location, display, fontC, color, line_thickness=thickness)
 
-    for location, cls_id, label in zip(locations, clses, labels):
-        color = colors(int(cls_id), True)
-        image = drawRectBox(image, location, label, fontC, color)
-
-    banner = 'STABLE VIOLATION' if stable_violation else 'MONITORING'
+    banner = 'VIOLATION' if stable_violation else 'DETECTION'
     banner_color = (0, 0, 255) if stable_violation else (0, 170, 0)
     cv2.putText(
         image,

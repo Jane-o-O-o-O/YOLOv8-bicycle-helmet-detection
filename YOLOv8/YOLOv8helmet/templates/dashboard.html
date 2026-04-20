@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YOLO 骑行综合检测平台</title>
+  <style>
+    :root {
+      --bg: #07090f;
+      --panel: rgba(14, 18, 30, 0.82);
+      --panel-strong: rgba(18, 24, 40, 0.92);
+      --line: rgba(255,255,255,.08);
+      --text: #eef2ff;
+      --muted: rgba(238,242,255,.66);
+      --accent: #7cf2c5;
+      --accent-2: #ffb86b;
+      --danger: #ff5d73;
+      --shadow: 0 28px 90px rgba(0,0,0,.5);
+      --hero-bg: linear-gradient(135deg, rgba(15,20,34,.92), rgba(8,10,18,.84));
+      --body-bg:
+        radial-gradient(circle at top left, rgba(124,242,197,.16), transparent 24%),
+        radial-gradient(circle at 85% 20%, rgba(255,184,107,.12), transparent 22%),
+        linear-gradient(180deg, #06070b 0%, #0b1020 100%);
+      --input-bg: rgba(9,12,20,.9);
+      --details-bg: rgba(255,255,255,.03);
+      --msg-bg: rgba(255,255,255,.04);
+      --preview-bg: rgba(255,255,255,.02);
+      --pill-bg: rgba(255,255,255,.06);
+      --card-title-bg: rgba(255,255,255,.02);
+      --stat-bg: linear-gradient(180deg, rgba(18,24,40,.9), rgba(10,12,20,.96));
+      --table-line: rgba(255,255,255,.08);
+    }
+    body[data-theme="light"] {
+      --bg: #f5f7fb;
+      --panel: rgba(255, 255, 255, 0.9);
+      --panel-strong: rgba(255, 255, 255, 0.98);
+      --line: rgba(12, 20, 44, .12);
+      --text: #182033;
+      --muted: rgba(24, 32, 51, .66);
+      --accent: #18b988;
+      --accent-2: #f2a13f;
+      --danger: #d63652;
+      --shadow: 0 20px 56px rgba(39, 51, 89, .16);
+      --hero-bg: linear-gradient(135deg, rgba(240,246,255,.96), rgba(231,241,255,.92));
+      --body-bg:
+        radial-gradient(circle at top left, rgba(24,185,136,.10), transparent 32%),
+        radial-gradient(circle at 85% 20%, rgba(242,161,63,.10), transparent 26%),
+        linear-gradient(180deg, #f8fbff 0%, #eef3fb 100%);
+      --input-bg: rgba(255,255,255,.96);
+      --details-bg: rgba(16, 28, 52, .03);
+      --msg-bg: rgba(255, 255, 255, .72);
+      --preview-bg: rgba(16, 28, 52, .03);
+      --pill-bg: rgba(16, 28, 52, .08);
+      --card-title-bg: rgba(16, 28, 52, .03);
+      --stat-bg: linear-gradient(180deg, rgba(255,255,255,.95), rgba(244,248,255,.9));
+      --table-line: rgba(16, 28, 52, .12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      color: var(--text);
+      background: var(--body-bg);
+    }
+    .wrap { max-width: 1600px; margin: 0 auto; padding: 24px; }
+    .hero {
+      position: relative; overflow: hidden;
+      background: var(--hero-bg);
+      border: 1px solid var(--line); border-radius: 30px;
+      padding: 28px 30px; box-shadow: var(--shadow); backdrop-filter: blur(14px);
+    }
+    .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .hero h1 { margin: 0; font-size: 42px; letter-spacing: .04em; }
+    .hero p { margin: 10px 0 0; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 18px; margin-top: 18px; align-items: stretch; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 24px;
+      box-shadow: var(--shadow); backdrop-filter: blur(16px); overflow: hidden;
+    }
+    .grid > .card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    .card h2 { margin: 0; padding: 18px 20px; font-size: 20px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.02); }
+    .card .body { padding: 18px 20px 20px; }
+    .workspace-card .body {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+    .stat-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .stat {
+      padding: 16px; border-radius: 18px; background: var(--stat-bg);
+      border: 1px solid var(--line);
+    }
+    .stat .label { color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
+    .stat .value { margin-top: 8px; font-size: 28px; font-weight: 700; word-break: break-all; }
+    .stat .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .tabs {
+      display: grid;
+      gap: 12px;
+      height: 100%;
+      flex: 1;
+      min-height: 0;
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      height: 100%;
+      min-height: 100%;
+    }
+    .action-btn {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--text);
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .action-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+    .action-btn.secondary { border-color: var(--line); }
+    details {
+      border: 1px solid var(--line); border-radius: 18px; background: var(--details-bg); overflow: hidden;
+    }
+    summary {
+      list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 700; letter-spacing: .03em;
+    }
+    summary::-webkit-details-marker { display: none; }
+    .form { padding: 0 18px 18px; display: grid; gap: 12px; }
+    input[type=text], input[type=file], select {
+      width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
+      background: var(--input-bg); color: var(--text); outline: none;
+    }
+    button {
+      width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; cursor: pointer;
+      color: #07100c; font-weight: 800; letter-spacing: .04em;
+      background: linear-gradient(135deg, var(--accent), #bdf8e6);
+    }
+    button.secondary { background: linear-gradient(135deg, #ffcf90, var(--accent-2)); }
+    .theme-toggle {
+      width: auto;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      color: var(--text);
+      background: var(--panel-strong);
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 10, 18, .55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      width: min(700px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--panel-strong);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--card-title-bg);
+    }
+    .modal-head h3 { margin: 0; font-size: 18px; }
+    .close-btn {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      width: auto;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .modal-body { padding: 16px; max-height: 78vh; overflow: auto; }
+    .drop-zone {
+      border: 2px dashed var(--line);
+      border-radius: 14px;
+      padding: 22px 16px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--preview-bg);
+      cursor: pointer;
+    }
+    .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(124,242,197,.12);
+      color: var(--text);
+    }
+    .file-hint { margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .preview {
+      min-height: 340px; border-radius: 20px; border: 1px dashed rgba(255,255,255,.12);
+      background: var(--preview-bg); display: grid; place-items: center; color: var(--muted);
+      padding: 18px; text-align: center;
+    }
+    .messages { display: grid; gap: 10px; margin-top: 18px; }
+    .msg {
+      padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--msg-bg);
+    }
+    .msg.success { border-color: rgba(124,242,197,.25); }
+    .msg.error { border-color: rgba(255,93,115,.26); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 10px 12px; border-bottom: 1px solid var(--table-line); text-align: left; }
+    th { color: var(--muted); font-weight: 600; }
+    .pill { display: inline-block; padding: 6px 10px; border-radius: 999px; background: var(--pill-bg); }
+    .danger { color: var(--danger); }
+    .accent { color: var(--accent); }
+    .muted { color: var(--muted); }
+    .full { grid-column: 1 / -1; }
+    .footer-note { color: var(--muted); margin-top: 14px; font-size: 13px; }
+    .preview img { width: 100%; max-height: 560px; object-fit: contain; display: block; background: #000; border-radius: 14px; }
+    body[data-theme="light"] .card h2 { background: var(--card-title-bg); }
+    body[data-theme="light"] .preview { border-color: var(--line); }
+    body[data-theme="light"] .hero h1 { color: #10223c; }
+    @media (max-width: 1280px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 860px) {
+      .action-grid { grid-template-columns: 1fr; grid-template-rows: repeat(4, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div class="hero-top">
+        <h1>YOLO 骑行综合检测平台</h1>
+        <button type="button" id="themeToggle" class="theme-toggle">切换浅色</button>
+      </div>
+      <p>支持两轮车识别、头盔违规识别、电动车载人检测，以及单图、视频、批量目录处理。</p>
+    </div>
+
+    <div class="messages">
+      {% for message in messages %}
+        <div class="msg {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+      {% if model_error %}
+        <div class="msg error">模型加载失败：{{ model_error }}</div>
+      {% endif %}
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <h2>系统概览</h2>
+        <div class="body">
+          <div class="stat-row">
+            <div class="stat"><div class="label">保存目录</div><div class="value" style="font-size:18px">{{ config.save_path }}</div><div class="sub">检测结果输出位置</div></div>
+            <div class="stat"><div class="label">违规记录</div><div class="value">{{ records|length }}</div><div class="sub">累计保存条数</div></div>
+            <div class="stat"><div class="label">两轮车类别 ID</div><div class="value">{{ config.two_wheeler_class_id }}</div><div class="sub">用于骑行目标统计</div></div>
+            <div class="stat"><div class="label">证据目录</div><div class="value" style="font-size:18px">{{ config.evidence_dir }}</div><div class="sub">违规截图保存位置</div></div>
+          </div>
+          <div class="footer-note">当前权重：{{ config.model_path }}</div>
+        </div>
+      </section>
+
+      <section class="card workspace-card">
+        <h2>检测工作区</h2>
+        <div class="body">
+          <div class="tabs">
+            <div class="action-grid">
+              <button type="button" class="action-btn" data-modal-open="modal-image">单图检测</button>
+              <button type="button" class="action-btn secondary" data-modal-open="modal-video">视频检测</button>
+              <button type="button" class="action-btn" data-modal-open="modal-folder">批量目录</button>
+              <button type="button" class="action-btn" data-modal-open="modal-config">系统配置</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card full">
+        <h2>结果预览</h2>
+        <div class="body">
+          {% if last_image %}
+            <div class="preview" style="padding:0; overflow:hidden; display:block;">
+              <img src="{{ last_image.preview_url }}" alt="推理结果">
+              <div style="padding:16px; text-align:left;">
+                <div class="pill">来源：{{ last_image.source }}</div>
+                <p>目标数：{{ last_image.targets }}</p>
+                <p>两轮车：{{ last_image.two_wheeler_count }}</p>
+                <p>未佩戴头盔：{% if last_image.helmet_violation %}<span class="danger">YES</span>{% else %}<span class="accent">NO</span>{% endif %}</p>
+                <p>电动车载人：{% if last_image.rider_violation %}<span class="danger">YES</span>（图中 <span class="danger">红色粗框</span> 标出对应车辆，共 {{ last_image.rider_violation_count }} 辆）{% else %}<span class="accent">NO</span>{% endif %}</p>
+                <p class="muted">证据：{{ last_image.evidence_path }}</p>
+              </div>
+            </div>
+          {% elif last_video %}
+            <div class="preview">
+              <div>
+                <div class="pill">视频处理完成</div>
+                <p>帧数：{{ last_video.frames }}</p>
+                <p class="muted">输出：{{ last_video.output_path }}</p>
+              </div>
+            </div>
+          {% elif folder_results %}
+            <div class="preview" style="display:block; overflow:auto; text-align:left;">
+              <table>
+                <thead>
+                  <tr><th>文件</th><th>目标数</th><th>两轮车</th><th>头盔违规</th><th>载人违规</th><th>输出</th></tr>
+                </thead>
+                <tbody>
+                  {% for row in folder_results %}
+                    <tr>
+                      <td>{{ row.file }}</td>
+                      <td>{{ row.targets }}</td>
+                      <td>{{ row.two_wheeler_count }}</td>
+                      <td>{% if row.helmet_violation %}<span class="danger">YES</span>{% else %}<span class="accent">NO</span>{% endif %}</td>
+                      <td>{% if row.rider_violation %}<span class="danger">YES</span>{% else %}<span class="accent">NO</span>{% endif %}</td>
+                      <td class="muted">{{ row.output_path }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="preview">
+              <div>
+                <p style="font-size:20px; margin:0 0 8px;">等待输入</p>
+                <p>上传图片、视频，或填写批量目录开始检测。</p>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card full">
+        <h2>违规记录</h2>
+        <div class="body" style="overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>时间</th><th>来源</th><th>类型</th><th>置信度</th><th>位置</th><th>判定</th><th>证据</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in records %}
+                <tr>
+                  <td>{{ row.id }}</td>
+                  <td>{{ row.time }}</td>
+                  <td>{{ row.source }}</td>
+                  <td>{{ row.type }}</td>
+                  <td>{{ row.confidence }}</td>
+                  <td>{{ row.location }}</td>
+                  <td>{{ row.vote }}</td>
+                  <td class="muted">{{ row.evidence_path }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="8" class="muted">暂无记录</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-image" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-image-title">
+      <div class="modal-head">
+        <h3 id="modal-image-title">单图检测</h3>
+        <button type="button" class="close-btn" data-modal-close>关闭</button>
+      </div>
+      <div class="modal-body">
+        <form class="form" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="image">
+          <label class="drop-zone" data-drop-zone data-target-input="image_file_input">
+            点击选择图片或拖拽图片到这里
+          </label>
+          <input type="file" id="image_file_input" name="image_file" accept="image/*" required>
+          <div class="file-hint" data-file-name="image_file_input">未选择文件</div>
+          <button type="submit">开始检测图片</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-video" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-video-title">
+      <div class="modal-head">
+        <h3 id="modal-video-title">视频检测</h3>
+        <button type="button" class="close-btn" data-modal-close>关闭</button>
+      </div>
+      <div class="modal-body">
+        <form class="form" method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="video">
+          <label class="drop-zone" data-drop-zone data-target-input="video_file_input">
+            点击选择视频或拖拽视频到这里
+          </label>
+          <input type="file" id="video_file_input" name="video_file" accept="video/*" required>
+          <div class="file-hint" data-file-name="video_file_input">未选择文件</div>
+          <button type="submit" class="secondary">开始处理视频</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-folder" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-folder-title">
+      <div class="modal-head">
+        <h3 id="modal-folder-title">批量目录</h3>
+        <button type="button" class="close-btn" data-modal-close>关闭</button>
+      </div>
+      <div class="modal-body">
+        <form class="form" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="folder">
+          <input type="text" name="folder_path" placeholder="请输入图片目录路径，例如 E:\\data\\helmet">
+          <button type="submit">开始批量检测</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-config" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-config-title">
+      <div class="modal-head">
+        <h3 id="modal-config-title">系统配置</h3>
+        <button type="button" class="close-btn" data-modal-close>关闭</button>
+      </div>
+      <div class="modal-body">
+        <form class="form" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="config">
+          <label class="muted">违规类别 ID</label>
+          <select name="violation_class_id">
+            {% for item in class_options %}
+              <option value="{{ item.id }}" {% if item.id == config.violation_class_id %}selected{% endif %}>{{ item.label }}</option>
+            {% endfor %}
+          </select>
+          <label class="muted">两轮车类别 ID（主模型）</label>
+          <input type="text" name="two_wheeler_class_id" value="{{ config.two_wheeler_class_id }}">
+          <label class="muted">行人类别 ID（载人模型）</label>
+          <input type="text" name="person_class_id" value="{{ config.person_class_id }}">
+          <label class="muted">载人判定最少人数</label>
+          <input type="text" name="rider_min_person_count" value="{{ config.rider_min_person_count }}">
+          <label class="muted">载人重叠阈值（0~1）</label>
+          <input type="text" name="rider_overlap_threshold" value="{{ config.rider_overlap_threshold }}">
+          <label class="muted">载人检测模型路径</label>
+          <input type="text" name="rider_model_path" value="{{ config.rider_model_path }}">
+          <label class="muted">保存目录</label>
+          <input type="text" name="save_path" value="{{ config.save_path }}">
+          <button type="submit">保存配置</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var key = 'dashboard-theme';
+      var body = document.body;
+      var toggle = document.getElementById('themeToggle');
+      if (!toggle) return;
+
+      var saved = localStorage.getItem(key);
+      var theme = saved || 'dark';
+      body.setAttribute('data-theme', theme);
+      toggle.textContent = theme === 'light' ? '切换深色' : '切换浅色';
+
+      toggle.addEventListener('click', function () {
+        var current = body.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+        var next = current === 'light' ? 'dark' : 'light';
+        body.setAttribute('data-theme', next);
+        localStorage.setItem(key, next);
+        toggle.textContent = next === 'light' ? '切换深色' : '切换浅色';
+      });
+    })();
+
+    (function () {
+      function openModal(id) {
+        var modal = document.getElementById(id);
+        if (!modal) return;
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeModal(modal) {
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+
+      document.querySelectorAll('[data-modal-open]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          openModal(btn.getAttribute('data-modal-open'));
+        });
+      });
+
+      document.querySelectorAll('.modal-overlay').forEach(function (overlay) {
+        overlay.addEventListener('click', function (e) {
+          if (e.target === overlay) closeModal(overlay);
+        });
+        overlay.querySelectorAll('[data-modal-close]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            closeModal(overlay);
+          });
+        });
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('.modal-overlay.open').forEach(function (modal) {
+          closeModal(modal);
+        });
+      });
+
+      function updateFileHint(inputId) {
+        var input = document.getElementById(inputId);
+        var hint = document.querySelector('[data-file-name="' + inputId + '"]');
+        if (!input || !hint) return;
+        var file = input.files && input.files[0];
+        hint.textContent = file ? ('已选择：' + file.name) : '未选择文件';
+      }
+
+      document.querySelectorAll('[data-drop-zone]').forEach(function (zone) {
+        var inputId = zone.getAttribute('data-target-input');
+        var input = document.getElementById(inputId);
+        if (!input) return;
+
+        zone.addEventListener('click', function () { input.click(); });
+        input.addEventListener('change', function () { updateFileHint(inputId); });
+
+        ['dragenter', 'dragover'].forEach(function (type) {
+          zone.addEventListener(type, function (e) {
+            e.preventDefault();
+            zone.classList.add('dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach(function (type) {
+          zone.addEventListener(type, function (e) {
+            e.preventDefault();
+            zone.classList.remove('dragover');
+          });
+        });
+        zone.addEventListener('drop', function (e) {
+          var files = e.dataTransfer && e.dataTransfer.files;
+          if (!files || !files.length) return;
+          input.files = files;
+          updateFileHint(inputId);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

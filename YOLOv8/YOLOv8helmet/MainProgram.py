@@ -120,7 +120,6 @@ class MainWindow(QMainWindow):
         self.ui.PicBtn.clicked.connect(self.open_img)
         self.ui.comboBox.activated.connect(self.combox_change)
         self.ui.VideoBtn.clicked.connect(self.vedio_show)
-        self.ui.CapBtn.clicked.connect(self.camera_show)
         self.ui.SaveBtn.clicked.connect(self.save_detect_video)
         self.ui.ExitBtn.clicked.connect(QCoreApplication.quit)
         self.ui.FilesBtn.clicked.connect(self.detact_batch_imgs)
@@ -144,6 +143,10 @@ class MainWindow(QMainWindow):
 
         self.timer_camera = QTimer(self)
         self.timer_camera.timeout.connect(self.open_frame)
+
+        # Real-time camera monitoring is removed from this build.
+        self.ui.CapBtn.hide()
+        self.ui.CaplineEdit.hide()
 
         self.init_table()
         self.init_innovation_panel()
@@ -234,7 +237,6 @@ class MainWindow(QMainWindow):
             self.video_stop()
         self.is_camera_open = False
         self.current_video_source = ''
-        self.ui.CaplineEdit.setText('摄像头未开启')
 
     def run_model(self, image_or_path):
         t1 = time.time()
@@ -521,14 +523,9 @@ class MainWindow(QMainWindow):
 
         self.raw_view_image = now_img.copy()
         results = self.run_model(now_img)
-        source_name = 'camera_0' if self.is_camera_open else self.current_video_source
-        self.detect_and_display(now_img, source_name, results, append_table=False, enable_vote=True)
+        self.detect_and_display(now_img, self.current_video_source, results, append_table=False, enable_vote=False)
 
     def vedio_show(self):
-        if self.is_camera_open:
-            self.is_camera_open = False
-            self.ui.CaplineEdit.setText('摄像头未开启')
-
         video_path = self.get_video_path()
         if not video_path:
             return
@@ -536,22 +533,6 @@ class MainWindow(QMainWindow):
         self.cap = cv2.VideoCapture(video_path)
         self.ui.comboBox.setDisabled(True)
         self.video_start()
-
-    def camera_show(self):
-        self.is_camera_open = not self.is_camera_open
-        if self.is_camera_open:
-            self.ui.CaplineEdit.setText('摄像头开启')
-            self.current_video_source = 'camera_0'
-            self.cap = cv2.VideoCapture(0)
-            self.ui.comboBox.setDisabled(True)
-            self.video_start()
-        else:
-            self.ui.CaplineEdit.setText('摄像头未开启')
-            self.video_stop()
-            self.ui.label_show.clear()
-            self.reset_display_state()
-            self.update_innovation_panel(stable_violation=False, vote_enabled=False)
-            cv2.destroyAllWindows()
 
     def get_resize_size(self, img):
         img_height, img_width, _ = img.shape
@@ -567,10 +548,6 @@ class MainWindow(QMainWindow):
     def save_detect_video(self):
         if self.cap is None and not self.org_path:
             QMessageBox.about(self, '提示', '当前没有可保存的信息，请先打开图片或视频。')
-            return
-
-        if self.is_camera_open:
-            QMessageBox.about(self, '提示', '摄像头实时画面不支持直接保存视频。')
             return
 
         tools.ensure_dir(Config.save_path)
