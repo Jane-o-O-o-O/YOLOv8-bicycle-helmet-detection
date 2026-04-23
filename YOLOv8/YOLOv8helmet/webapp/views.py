@@ -28,6 +28,12 @@ def _warmup_model(model: YOLO) -> None:
         pass
 
 
+def load_yolo_model(model_path: str) -> YOLO:
+    model = YOLO(model_path, task='detect')
+    _warmup_model(model)
+    return model
+
+
 def load_model() -> YOLO:
     try:
         import torch
@@ -38,9 +44,7 @@ def load_model() -> YOLO:
     except Exception:
         pass
 
-    model = YOLO(Config.model_path, task='detect')
-    _warmup_model(model)
-    return model
+    return load_yolo_model(Config.model_path)
 
 
 def get_model():
@@ -63,6 +67,50 @@ def get_rider_model():
         model = load_rider_model()
         setattr(get_rider_model, '_cached', model)
     return model
+
+
+def get_compare_train5_model():
+    model = getattr(get_compare_train5_model, '_cached', None)
+    model_path = Config.compare_model_train5_path
+    cached_path = getattr(get_compare_train5_model, '_cached_path', None)
+    if model is None or cached_path != model_path:
+        model = load_yolo_model(model_path)
+        setattr(get_compare_train5_model, '_cached', model)
+        setattr(get_compare_train5_model, '_cached_path', model_path)
+    return model
+
+
+def get_compare_train7_model():
+    model = getattr(get_compare_train7_model, '_cached', None)
+    model_path = Config.compare_model_train7_path
+    cached_path = getattr(get_compare_train7_model, '_cached_path', None)
+    if model is None or cached_path != model_path:
+        model = load_yolo_model(model_path)
+        setattr(get_compare_train7_model, '_cached', model)
+        setattr(get_compare_train7_model, '_cached_path', model_path)
+    return model
+
+
+def get_cached_model_by_path(model_path: str) -> YOLO:
+    if not model_path:
+        raise ValueError('模型路径不能为空。')
+    cache = getattr(get_cached_model_by_path, '_cache', {})
+    model = cache.get(model_path)
+    if model is None:
+        model = load_yolo_model(model_path)
+        cache[model_path] = model
+        setattr(get_cached_model_by_path, '_cache', cache)
+    return model
+
+
+def save_uploaded_weight(upload) -> str:
+    suffix = Path(upload.name).suffix.lower()
+    if suffix != '.pt':
+        raise ValueError('模型文件仅支持 .pt 格式。')
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        for chunk in upload.chunks():
+            tmp.write(chunk)
+        return tmp.name
 
 
 def _box_intersection_ratio(box_a: list[int], box_b: list[int]) -> float:
@@ -165,6 +213,15 @@ def save_preview_image(image: np.ndarray, source_name: str) -> str:
     return f'{settings.MEDIA_URL}preview/{preview_path.name}'
 
 
+def save_compare_preview_image(image: np.ndarray, source_name: str, model_tag: str) -> str:
+    preview_dir = Path(settings.MEDIA_ROOT) / 'compare'
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    safe_stem = Path(str(source_name)).stem.replace(' ', '_')
+    preview_path = preview_dir / f'{safe_stem}_{model_tag}_preview.jpg'
+    tools.img_cvwrite(str(preview_path), image)
+    return f'{settings.MEDIA_URL}compare/{preview_path.name}'
+
+
 def save_video_result_path(source_name: str) -> tuple[str, str]:
     video_dir = Path(settings.MEDIA_ROOT) / 'videos'
     video_dir.mkdir(parents=True, exist_ok=True)
@@ -172,6 +229,16 @@ def save_video_result_path(source_name: str) -> tuple[str, str]:
     output_name = f'{safe_stem}_detect_result.mp4'
     output_path = video_dir / output_name
     output_url = f'{settings.MEDIA_URL}videos/{output_name}'
+    return str(output_path), output_url
+
+
+def save_compare_video_result_path(source_name: str, model_tag: str) -> tuple[str, str]:
+    video_dir = Path(settings.MEDIA_ROOT) / 'compare_videos'
+    video_dir.mkdir(parents=True, exist_ok=True)
+    safe_stem = Path(str(source_name)).stem.replace(' ', '_')
+    output_name = f'{safe_stem}_{model_tag}_compare_result.mp4'
+    output_path = video_dir / output_name
+    output_url = f'{settings.MEDIA_URL}compare_videos/{output_name}'
     return str(output_path), output_url
 
 
@@ -394,3 +461,152 @@ def dashboard(request: HttpRequest) -> HttpResponse:
 
     context['records'] = load_records().to_dict('records')
     return render(request, 'dashboard.html', context)
+
+
+def _build_compare_result_item(frame: np.ndarray, result, source_name: str, model_name: str, model_tag: str) -> dict:
+    data = extract_detection_data(frame, result, rider_results=None)
+    annotated = build_annotated_frame(frame, data)
+    preview_url = save_compare_preview_image(annotated, source_name, model_tag)
+    return {
+        'model_name': model_name,
+        'preview_url': preview_url,
+        'targets': len(data['locations']),
+        'two_wheeler_count': data['two_wheeler_count'],
+        'helmet_violation': data['violation_present'],
+        'rider_violation': data['rider_violation_present'],
+    }
+
+
+def _run_compare_video(model: YOLO, temp_path: str, source_name: str, model_tag: str) -> dict:
+    cap = cv2.VideoCapture(temp_path)
+    if not cap.isOpened():
+        raise ValueError('无法读取上传的视频文件。')
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    if width <= 0 or height <= 0:
+        cap.release()
+        raise ValueError('视频分辨率读取失败，请尝试更换视频格式。')
+
+    out_path, out_url = save_compare_video_result_path(source_name, model_tag)
+    writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+    if not writer.isOpened():
+        cap.release()
+        raise ValueError('视频写入器初始化失败，无法保存检测结果。')
+
+    frame_count = 0
+    total_targets = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_count += 1
+        result = model(frame)[0]
+        data = extract_detection_data(frame, result, rider_results=None)
+        total_targets += len(data['locations'])
+        annotated = build_annotated_frame(frame, data)
+        writer.write(annotated)
+
+    writer.release()
+    cap.release()
+    return {
+        'model_name': model_tag,
+        'output_path': out_path,
+        'output_url': out_url,
+        'frames': frame_count,
+        'avg_targets': (total_targets / frame_count) if frame_count else 0.0,
+    }
+
+
+def compare_inference(request: HttpRequest) -> HttpResponse:
+    compare_error = None
+
+    context = {
+        'train5_path': Config.compare_model_train5_path,
+        'train7_path': Config.compare_model_train7_path,
+        'model_error': compare_error,
+        'image_results': [],
+        'video_results': [],
+        'last_source': None,
+    }
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        model_a_upload = request.FILES.get('model_a_file')
+        model_b_upload = request.FILES.get('model_b_file')
+        if not model_a_upload or not model_b_upload:
+            messages.error(request, '请先选择模型 A 和模型 B 的 .pt 文件。')
+            return render(request, 'compare.html', context)
+
+        temp_model_paths: list[str] = []
+        try:
+            model_a_path = save_uploaded_weight(model_a_upload)
+            model_b_path = save_uploaded_weight(model_b_upload)
+            temp_model_paths.extend([model_a_path, model_b_path])
+
+            model_pair = [
+                {'name': '模型A', 'path': model_a_path, 'tag': 'model_a', 'model': get_cached_model_by_path(model_a_path)},
+                {'name': '模型B', 'path': model_b_path, 'tag': 'model_b', 'model': get_cached_model_by_path(model_b_path)},
+            ]
+
+            if action == 'image':
+                upload = request.FILES.get('image_file')
+                if upload:
+                    file_bytes = upload.read()
+                    img = cv2.imdecode(np.frombuffer(file_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+                    if img is None:
+                        messages.error(request, '无法读取上传的图片。')
+                    else:
+                        context['last_source'] = upload.name
+                        image_results = []
+                        for model_item in model_pair:
+                            result = model_item['model'](img)[0]
+                            image_results.append(
+                                _build_compare_result_item(
+                                    img,
+                                    result,
+                                    upload.name,
+                                    model_name=model_item['name'],
+                                    model_tag=model_item['tag'],
+                                )
+                            )
+                        context['image_results'] = image_results
+                        messages.success(request, '双模型图片对比完成。')
+
+            elif action == 'video':
+                video_file = request.FILES.get('video_file')
+                if video_file:
+                    suffix = Path(video_file.name).suffix.lower()
+                    if suffix not in SUPPORTED_VIDEO_SUFFIX:
+                        messages.error(request, '视频格式不支持。')
+                    else:
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                            for chunk in video_file.chunks():
+                                tmp.write(chunk)
+                            temp_path = tmp.name
+                        context['last_source'] = video_file.name
+                        try:
+                            video_results = []
+                            for model_item in model_pair:
+                                row = _run_compare_video(
+                                    model_item['model'],
+                                    temp_path,
+                                    video_file.name,
+                                    model_item['tag'],
+                                )
+                                row['model_name'] = model_item['name']
+                                video_results.append(row)
+                            context['video_results'] = video_results
+                            messages.success(request, '双模型视频对比完成。')
+                        except Exception as exc:
+                            messages.error(request, str(exc))
+                        finally:
+                            Path(temp_path).unlink(missing_ok=True)
+        except Exception as exc:
+            messages.error(request, str(exc))
+        finally:
+            for path in temp_model_paths:
+                Path(path).unlink(missing_ok=True)
+
+    return render(request, 'compare.html', context)

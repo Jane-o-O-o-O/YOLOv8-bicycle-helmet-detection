@@ -7,6 +7,8 @@ save_path = 'save_data'
 # Model path
 model_path = 'models/best.pt'
 rider_model_path = 'yolov8n.pt'
+compare_model_train5_path = r'E:\接单项目\yolo头盔\YOLOv8\YOLOv8helmet\runs\detect\train5\weights\best.pt'
+compare_model_train7_path = r'E:\接单项目\yolo头盔\YOLOv8\YOLOv8helmet\runs\detect\train7\weights\best.pt'
 
 # Class names
 names = {0: 'helmet', 1: 'without', 2: 'two_wheeler'}
