@@ -165,6 +165,16 @@ def save_preview_image(image: np.ndarray, source_name: str) -> str:
     return f'{settings.MEDIA_URL}preview/{preview_path.name}'
 
 
+def save_video_result_path(source_name: str) -> tuple[str, str]:
+    video_dir = Path(settings.MEDIA_ROOT) / 'videos'
+    video_dir.mkdir(parents=True, exist_ok=True)
+    safe_stem = Path(str(source_name)).stem.replace(' ', '_')
+    output_name = f'{safe_stem}_detect_result.mp4'
+    output_path = video_dir / output_name
+    output_url = f'{settings.MEDIA_URL}videos/{output_name}'
+    return str(output_path), output_url
+
+
 def save_evidence(image: np.ndarray, source_name: str) -> str:
     return tools.save_violation_event_image(image, source_name, Config.evidence_dir)
 
@@ -327,31 +337,42 @@ def dashboard(request: HttpRequest) -> HttpResponse:
                             tmp.write(chunk)
                         temp_path = tmp.name
                     cap = cv2.VideoCapture(temp_path)
-                    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
-                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    out_path = os.path.join(Config.save_path, f'{Path(video_file.name).stem}_detect_result.avi')
-                    writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'XVID'), fps, (width, height))
-                    frame_count = 0
-                    saved_any = False
-                    while cap.isOpened():
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
-                        frame_count += 1
-                        result = model(frame)[0]
-                        rider_result = rider_model(frame)[0] if rider_model is not None else None
-                        data = extract_detection_data(frame, result, rider_result)
-                        annotated = build_annotated_frame(frame, data)
-                        writer.write(annotated)
-                        if (data['violation_present'] or data['rider_violation_present']) and not saved_any:
-                            evidence_path = save_evidence(annotated, video_file.name)
-                            record_frame_violations(video_file.name, data, evidence_path)
-                            saved_any = True
-                    cap.release()
-                    writer.release()
-                    context['last_video'] = {'output_path': out_path, 'frames': frame_count}
-                    messages.success(request, f'视频检测完成，结果保存为：{out_path}')
+                    if not cap.isOpened():
+                        messages.error(request, '无法读取上传的视频文件。')
+                    else:
+                        fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+                        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                        if width <= 0 or height <= 0:
+                            cap.release()
+                            messages.error(request, '视频分辨率读取失败，请尝试更换视频格式。')
+                        else:
+                            out_path, out_url = save_video_result_path(video_file.name)
+                            writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+                            frame_count = 0
+                            saved_any = False
+                            if not writer.isOpened():
+                                messages.error(request, '视频写入器初始化失败，无法保存检测结果。')
+                            else:
+                                while cap.isOpened():
+                                    ret, frame = cap.read()
+                                    if not ret:
+                                        break
+                                    frame_count += 1
+                                    result = model(frame)[0]
+                                    rider_result = rider_model(frame)[0] if rider_model is not None else None
+                                    data = extract_detection_data(frame, result, rider_result)
+                                    annotated = build_annotated_frame(frame, data)
+                                    writer.write(annotated)
+                                    if (data['violation_present'] or data['rider_violation_present']) and not saved_any:
+                                        evidence_path = save_evidence(annotated, video_file.name)
+                                        record_frame_violations(video_file.name, data, evidence_path)
+                                        saved_any = True
+                                context['last_video'] = {'output_path': out_path, 'output_url': out_url, 'frames': frame_count}
+                                messages.success(request, f'视频检测完成，结果保存为：{out_path}')
+                            writer.release()
+                            cap.release()
+                    Path(temp_path).unlink(missing_ok=True)
 
         elif action == 'config':
             try:
