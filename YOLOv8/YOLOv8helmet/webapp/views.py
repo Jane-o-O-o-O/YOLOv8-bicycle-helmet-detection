@@ -416,7 +416,11 @@ def dashboard(request: HttpRequest) -> HttpResponse:
                             messages.error(request, '视频分辨率读取失败，请尝试更换视频格式。')
                         else:
                             out_path, out_url = save_video_result_path(video_file.name)
-                            writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+                            fourcc = cv2.VideoWriter_fourcc(*'avc1')
+                            writer = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
+                            if not writer.isOpened():
+                                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                                writer = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
                             frame_count = 0
                             saved_any = False
                             if not writer.isOpened():
@@ -491,7 +495,11 @@ def _run_compare_video(model: YOLO, temp_path: str, source_name: str, model_tag:
         raise ValueError('视频分辨率读取失败，请尝试更换视频格式。')
 
     out_path, out_url = save_compare_video_result_path(source_name, model_tag)
-    writer = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    writer = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
+    if not writer.isOpened():
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        writer = cv2.VideoWriter(out_path, fourcc, fps, (width, height))
     if not writer.isOpened():
         cap.release()
         raise ValueError('视频写入器初始化失败，无法保存检测结果。')
