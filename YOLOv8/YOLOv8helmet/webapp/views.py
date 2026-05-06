@@ -175,7 +175,8 @@ def extract_detection_data(frame: np.ndarray, results, rider_results=None) -> di
 def build_annotated_frame(frame, data):
     labels = []
     for index, (cls_id, conf) in enumerate(zip(data['classes'], data['confidences'])):
-        label = f'{Config.CH_names[cls_id]} {conf * 100:.1f}%'
+        name = Config.CH_names[cls_id] if cls_id < len(Config.CH_names) else f'class_{cls_id}'
+        label = f'{name} {conf * 100:.1f}%'
         if index in data['rider_violation_indices']:
             rider_count = data['rider_counts'].get(index, 0)
             label = f'{label} 载人:{rider_count}'
