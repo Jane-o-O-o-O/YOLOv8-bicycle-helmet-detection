@@ -75,7 +75,7 @@ def build_annotated_frame(frame, data, fontC, colors, vote_hits=0, stable_violat
         fontC,
         colors,
         roi_rect=data['roi_rect'],
-        status_lines=status_lines,
+        status_lines=None,
         stable_violation=stable_violation,
     )
     return annotated, status_lines
@@ -426,7 +426,7 @@ class MainWindow(QMainWindow):
                 self.fontC,
                 self.colors,
                 roi_rect=self.roi_rect,
-                status_lines=self.status_lines,
+                status_lines=None,
                 stable_violation=False,
             ))
             return
@@ -454,7 +454,7 @@ class MainWindow(QMainWindow):
             self.fontC,
             self.colors,
             roi_rect=self.roi_rect,
-            status_lines=self.status_lines,
+            status_lines=None,
             stable_violation=False,
         )
         self.show_image(preview)

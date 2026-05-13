@@ -60,6 +60,7 @@
       margin: 0;
       min-height: 100vh;
       font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      font-size: 21px;
       color: var(--text);
       background: var(--body-bg);
     }
@@ -71,9 +72,9 @@
       padding: 28px 30px; box-shadow: var(--shadow); backdrop-filter: blur(14px);
     }
     .hero-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .hero h1 { margin: 0; font-size: 42px; letter-spacing: .04em; }
-    .hero p { margin: 10px 0 0; color: var(--muted); }
-    .grid { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 18px; margin-top: 18px; align-items: stretch; }
+    .hero h1 { margin: 0; font-size: 56px; letter-spacing: .04em; }
+    .hero p { margin: 10px 0 0; color: var(--muted); font-size: 23px; line-height: 1.55; max-width: 960px; }
+    .grid { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; gap: 18px; margin-top: 18px; align-items: stretch; }
     .card {
       background: var(--panel); border: 1px solid var(--line); border-radius: 24px;
       box-shadow: var(--shadow); backdrop-filter: blur(16px); overflow: hidden;
@@ -83,7 +84,8 @@
       display: flex;
       flex-direction: column;
     }
-    .card h2 { margin: 0; padding: 18px 20px; font-size: 20px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.02); }
+    .card h2 { margin: 0; padding: 18px 20px; font-size: 31px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.02); }
+    .card h2.card-section-title-xl { font-size: 42px; padding: 22px 22px; letter-spacing: .02em; }
     .card .body { padding: 18px 20px 20px; }
     .workspace-card .body {
       flex: 1;
@@ -95,9 +97,9 @@
       padding: 16px; border-radius: 18px; background: var(--stat-bg);
       border: 1px solid var(--line);
     }
-    .stat .label { color: var(--muted); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; }
-    .stat .value { margin-top: 8px; font-size: 28px; font-weight: 700; word-break: break-all; }
-    .stat .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .stat .label { color: var(--muted); font-size: 17px; letter-spacing: .08em; text-transform: uppercase; }
+    .stat .value { margin-top: 8px; font-size: 44px; font-weight: 700; word-break: break-all; line-height: 1.2; }
+    .stat .sub { color: var(--muted); font-size: 20px; margin-top: 6px; line-height: 1.45; }
     .tabs {
       display: grid;
       gap: 12px;
@@ -108,7 +110,7 @@
     .action-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      grid-template-rows: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
       gap: 12px;
       height: 100%;
       min-height: 100%;
@@ -117,41 +119,43 @@
       width: 100%;
       height: 100%;
       min-height: 0;
-      padding: 12px 14px;
+      padding: 14px 16px;
       border-radius: 14px;
       border: 1px solid var(--line);
       background: var(--panel-strong);
       color: var(--text);
+      font-size: 28px;
       font-weight: 700;
+      letter-spacing: .02em;
       cursor: pointer;
       transition: transform .15s ease, box-shadow .15s ease;
     }
     .action-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,.15); }
-    .action-btn.secondary { border-color: var(--line); }
-    .action-btn.compare-btn {
-      grid-column: 1 / -1;
-      background: #ffffff;
-      color: #1a2338;
-      border: 1px solid rgba(16, 28, 52, .15);
-    }
     details {
       border: 1px solid var(--line); border-radius: 18px; background: var(--details-bg); overflow: hidden;
     }
     summary {
-      list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 700; letter-spacing: .03em;
+      list-style: none; cursor: pointer; padding: 16px 18px; font-weight: 700; letter-spacing: .03em; font-size: 1.08em;
     }
     summary::-webkit-details-marker { display: none; }
     .form { padding: 0 18px 18px; display: grid; gap: 12px; }
     input[type=text], input[type=file], select {
       width: 100%; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
       background: var(--input-bg); color: var(--text); outline: none;
+      font-size: 21px;
     }
     button {
       width: 100%; padding: 12px 14px; border: 0; border-radius: 14px; cursor: pointer;
-      color: #07100c; font-weight: 800; letter-spacing: .04em;
+      color: #07100c; font-weight: 800; letter-spacing: .04em; font-size: 21px;
       background: linear-gradient(135deg, var(--accent), #bdf8e6);
     }
     button.secondary { background: linear-gradient(135deg, #ffcf90, var(--accent-2)); }
+    /* 检测工作区大按钮：勿继承表单提交按钮的橙黄 secondary 样式 */
+    .action-btn.secondary {
+      border-color: var(--line);
+      background: var(--panel-strong);
+      color: var(--text);
+    }
     .theme-toggle {
       width: auto;
       padding: 10px 14px;
@@ -160,6 +164,7 @@
       color: var(--text);
       background: var(--panel-strong);
       cursor: pointer;
+      font-size: 19px;
       font-weight: 700;
       letter-spacing: .02em;
     }
@@ -190,7 +195,7 @@
       border-bottom: 1px solid var(--line);
       background: var(--card-title-bg);
     }
-    .modal-head h3 { margin: 0; font-size: 18px; }
+    .modal-head h3 { margin: 0; font-size: 24px; }
     .close-btn {
       border: 1px solid var(--line);
       background: transparent;
@@ -200,6 +205,7 @@
       border-radius: 10px;
       cursor: pointer;
       font-weight: 700;
+      font-size: 19px;
     }
     .modal-body { padding: 16px; max-height: 78vh; overflow: auto; }
     .drop-zone {
@@ -210,40 +216,58 @@
       color: var(--muted);
       background: var(--preview-bg);
       cursor: pointer;
+      font-size: 21px;
     }
     .drop-zone.dragover {
       border-color: var(--accent);
       background: rgba(124,242,197,.12);
       color: var(--text);
     }
-    .file-hint { margin-top: 8px; color: var(--muted); font-size: 13px; }
+    .file-hint { margin-top: 8px; color: var(--muted); font-size: 17px; }
     .preview {
       min-height: 340px; border-radius: 20px; border: 1px dashed rgba(255,255,255,.12);
       background: var(--preview-bg); display: grid; place-items: center; color: var(--muted);
       padding: 18px; text-align: center;
+      font-size: 22px;
     }
+    .preview .preview-placeholder-title { font-size: 34px; font-weight: 700; color: var(--text); margin: 0 0 10px; }
+    .preview .preview-placeholder-hint { margin: 0; line-height: 1.55; }
+    /* 图/视频下方检测摘要（来源、目标数、违规结论等） */
+    .preview-summary {
+      padding: 24px 28px;
+      text-align: left;
+      font-size: 30px;
+      line-height: 1.45;
+      color: var(--text);
+    }
+    .preview-summary .pill {
+      font-size: 26px;
+      padding: 12px 18px;
+      margin-bottom: 10px;
+    }
+    .preview-summary p { margin: 16px 0 0; }
     .messages { display: grid; gap: 10px; margin-top: 18px; }
     .msg {
       padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--msg-bg);
     }
     .msg.success { border-color: rgba(124,242,197,.25); }
     .msg.error { border-color: rgba(255,93,115,.26); }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 10px 12px; border-bottom: 1px solid var(--table-line); text-align: left; }
+    table { width: 100%; border-collapse: collapse; font-size: 19px; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--table-line); text-align: left; }
     th { color: var(--muted); font-weight: 600; }
     .pill { display: inline-block; padding: 6px 10px; border-radius: 999px; background: var(--pill-bg); }
     .danger { color: var(--danger); }
     .accent { color: var(--accent); }
     .muted { color: var(--muted); }
     .full { grid-column: 1 / -1; }
-    .footer-note { color: var(--muted); margin-top: 14px; font-size: 13px; }
+    .footer-note { color: var(--muted); margin-top: 14px; font-size: 19px; line-height: 1.45; word-break: break-all; }
     .preview img, .preview video { width: 100%; max-height: 560px; object-fit: contain; display: block; background: #000; border-radius: 14px; }
     body[data-theme="light"] .card h2 { background: var(--card-title-bg); }
     body[data-theme="light"] .preview { border-color: var(--line); }
     body[data-theme="light"] .hero h1 { color: #10223c; }
     @media (max-width: 1280px) { .grid { grid-template-columns: 1fr; } }
     @media (max-width: 860px) {
-      .action-grid { grid-template-columns: 1fr; grid-template-rows: repeat(5, minmax(0, 1fr)); }
+      .action-grid { grid-template-columns: 1fr; grid-template-rows: repeat(4, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -271,10 +295,10 @@
         <h2>系统概览</h2>
         <div class="body">
           <div class="stat-row">
-            <div class="stat"><div class="label">保存目录</div><div class="value" style="font-size:18px">{{ config.save_path }}</div><div class="sub">检测结果输出位置</div></div>
+            <div class="stat"><div class="label">保存目录</div><div class="value" style="font-size:28px">{{ config.save_path }}</div><div class="sub">检测结果输出位置</div></div>
             <div class="stat"><div class="label">违规记录</div><div class="value">{{ records|length }}</div><div class="sub">累计保存条数</div></div>
             <div class="stat"><div class="label">两轮车类别 ID</div><div class="value">{{ config.two_wheeler_class_id }}</div><div class="sub">用于骑行目标统计</div></div>
-            <div class="stat"><div class="label">证据目录</div><div class="value" style="font-size:18px">{{ config.evidence_dir }}</div><div class="sub">违规截图保存位置</div></div>
+            <div class="stat"><div class="label">证据目录</div><div class="value" style="font-size:28px">{{ config.evidence_dir }}</div><div class="sub">违规截图保存位置</div></div>
           </div>
           <div class="footer-note">当前权重：{{ config.model_path }}</div>
         </div>
@@ -289,19 +313,18 @@
               <button type="button" class="action-btn secondary" data-modal-open="modal-video">视频检测</button>
               <button type="button" class="action-btn" data-modal-open="modal-folder">批量目录</button>
               <button type="button" class="action-btn" data-modal-open="modal-config">系统配置</button>
-              <button type="button" class="action-btn compare-btn" onclick="window.location.href='/compare/'">模型推理对比</button>
             </div>
           </div>
         </div>
       </section>
 
       <section class="card full">
-        <h2>结果预览</h2>
+        <h2 class="card-section-title-xl">结果预览</h2>
         <div class="body">
           {% if last_image %}
             <div class="preview" style="padding:0; overflow:hidden; display:block;">
               <img src="{{ last_image.preview_url }}" alt="推理结果">
-              <div style="padding:16px; text-align:left;">
+              <div class="preview-summary">
                 <div class="pill">来源：{{ last_image.source }}</div>
                 <p>目标数：{{ last_image.targets }}</p>
                 <p>两轮车：{{ last_image.two_wheeler_count }}</p>
@@ -316,7 +339,7 @@
                 <source src="{{ last_video.output_url }}" type="video/mp4">
                 当前浏览器不支持播放检测视频，请直接打开输出文件。
               </video>
-              <div style="padding:16px; text-align:left;">
+              <div class="preview-summary">
                 <div class="pill">视频处理完成</div>
                 <p>帧数：{{ last_video.frames }}</p>
                 <p class="muted">输出：{{ last_video.output_path }}</p>
@@ -345,8 +368,8 @@
           {% else %}
             <div class="preview">
               <div>
-                <p style="font-size:20px; margin:0 0 8px;">等待输入</p>
-                <p>上传图片、视频，或填写批量目录开始检测。</p>
+                <p class="preview-placeholder-title">等待输入</p>
+                <p class="preview-placeholder-hint">上传图片、视频，或填写批量目录开始检测。</p>
               </div>
             </div>
           {% endif %}
@@ -354,7 +377,7 @@
       </section>
 
       <section class="card full">
-        <h2>违规记录</h2>
+        <h2 class="card-section-title-xl">违规记录</h2>
         <div class="body" style="overflow:auto;">
           <table>
             <thead>
